@@ -34,13 +34,16 @@ def loadstockbasics():
     conn.close()
     return df
 
-def loadalldaydata():
+def loadalldaydata(code='ALL'):
     sb = loadstockbasics()
     today = datetime.date.today()
     stockenddte = today.strftime('%Y-%m-%d')
-    print(stockenddte)
+    #print(stockenddte)
     record ={}
-    for stockcode in sb.index:
+    codelist = [code]
+    if code == 'ALL':
+        codelist = sb.index
+    for stockcode in codelist:
         if len(record) < 5:
             bgnpre = str(sb['timeToMarket'][stockcode])
             if len(bgnpre) == 8:
