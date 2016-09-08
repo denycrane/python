@@ -44,12 +44,11 @@ def loadalldaydata(code='ALL'):
     if code == 'ALL':
         codelist = sb.index
     for stockcode in codelist:
-        if len(record) < 5:
-            bgnpre = str(sb['timeToMarket'][stockcode])
-            if len(bgnpre) == 8:
-                stockbgndte = datetime.datetime.strptime(str(bgnpre),"%Y%m%d").strftime('%Y-%m-%d')
-                rs = loaddaydata(stockcode,stockbgndte,stockenddte)
-                record[stockcode]=len(rs.index)
+        bgnpre = str(sb['timeToMarket'][stockcode])
+        if len(bgnpre) == 8:
+            stockbgndte = datetime.datetime.strptime(str(bgnpre),"%Y%m%d").strftime('%Y-%m-%d')
+            rs = loaddaydata(stockcode,stockbgndte,stockenddte)
+            record[stockcode]=len(rs.index)
     print(record)
 
 
