@@ -9,14 +9,28 @@ def loaddaydata(stockcode, bgndte, enddte):
     cursor = conn.cursor()
     engine = create_engine('mysql://root:ms@ciji1995@127.0.0.1/tushare?charset=utf8')
     print(stockcode, bgndte, enddte)
+    #bgnyear = int(bgndte[0:4])
+    #endyear = int(enddte[0:4])
+    for datayear in range(int(bgndte[0:4]),int(enddte[0:4])+1):
+        yearlastday = str(datayear) + '-12-31'
+        yearfirstday = str(datayear) + '-01-01'
+        if enddte >= yearlastday:
+            endday = yearlastday
+        else:
+            endday = enddte
+        if bgndte <= yearfirstday:
+            bgnday = yearfirstday
+        else:
+            bgnday = bgndte
+        df = ts.get_h_data(code=stockcode, start=bgnday, end=endday, retry_count=100)
+        print(df)
+        df.to_sql('tmpdata', engine, if_exists='replace')
+        cursor.execute(
+            'delete from stockdaydata where ts_code = \'%s\' and ts_date between \'%s\' and \'%s\''
+            % (stockcode, bgndte, enddte))
+        cursor.execute("insert into stockdaydata select \'%s\' , a.* from tmpdata a " % (stockcode))
+        datayear += datayear
 
-    df = ts.get_h_data(code=stockcode, start=bgndte, end=enddte)
-    print(df)
-    df.to_sql('tmpdata', engine, if_exists='replace')
-    cursor.execute(
-        'delete from stockdaydata where ts_code = \'%s\' and ts_date between \'%s\' and \'%s\''
-        % (stockcode, bgndte, enddte))
-    cursor.execute("insert into stockdaydata select \'%s\' , a.* from tmpdata a " % (stockcode))
     conn.commit()
     cursor.close()
     conn.close()
