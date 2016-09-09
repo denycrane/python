@@ -11,7 +11,7 @@ def loaddaydata(stockcode, bgndte, enddte):
     print(stockcode, bgndte, enddte)
     #bgnyear = int(bgndte[0:4])
     #endyear = int(enddte[0:4])
-    for datayear in range(int(bgndte[0:4]),int(enddte[0:4])+1):
+    for datayear in range(int(bgndte[0:4]), int(enddte[0:4])+1):
         yearlastday = str(datayear) + '-12-31'
         yearfirstday = str(datayear) + '-01-01'
         if enddte >= yearlastday:
@@ -22,13 +22,14 @@ def loaddaydata(stockcode, bgndte, enddte):
             bgnday = yearfirstday
         else:
             bgnday = bgndte
-        df = ts.get_h_data(code=stockcode, start=bgnday, end=endday, retry_count=100)
-        print(df)
+        df = ts.get_h_data(code=stockcode, start=bgnday, end=endday, retry_count=100, pause=5)
+        print(stockcode,bgnday,endday,len(df.index))
         df.to_sql('tmpdata', engine, if_exists='replace')
         cursor.execute(
             'delete from stockdaydata where ts_code = \'%s\' and ts_date between \'%s\' and \'%s\''
-            % (stockcode, bgndte, enddte))
+            % (stockcode, bgnday, endday))
         cursor.execute("insert into stockdaydata select \'%s\' , a.* from tmpdata a " % (stockcode))
+        conn.commit()
         datayear += datayear
 
     conn.commit()
@@ -63,7 +64,7 @@ def loadalldaydata(code='ALL'):
             stockbgndte = datetime.datetime.strptime(str(bgnpre),"%Y%m%d").strftime('%Y-%m-%d')
             rs = loaddaydata(stockcode,stockbgndte,stockenddte)
             record[stockcode]=len(rs.index)
-    print(record)
+    #print(record)
 
 
 
