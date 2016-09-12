@@ -5,7 +5,7 @@ import mysql.connector
 import datetime
 
 
-def loaddaydata(stockcode, bgndte, enddte, cflg='N', loadmode='ONCE'):
+def loaddaydata(stockcode, bgndte, enddte, cflg='N', loadmode='YEAR'):
     print('\n\n--', datetime.datetime.now(), '\nloaddaydata:', stockcode, bgndte, enddte, )
     conn = mysql.connector.connect(user='root', password='ms@ciji1995', database='tushare')
     cursor = conn.cursor()
@@ -39,6 +39,7 @@ def loaddaydata(stockcode, bgndte, enddte, cflg='N', loadmode='ONCE'):
         if df is None:
             return
         df.to_sql('tmpdata', engine, if_exists='replace')
+        mntcnt = len(df.index)
         cursor.execute(
             "delete from stockdaydata where ts_code = '%s' and ts_date between '%s' and '%s'"
             % (stockcode, bgndte, enddte))
@@ -89,7 +90,7 @@ def loadstockbasics():
     return df
 
 
-def loadalldaydata(code='ADD'):
+def loadalldaydata(code='ALL'):
     conn = mysql.connector.connect(user='root', password='ms@ciji1995', database='tushare')
     cursor = conn.cursor()
     cursor.execute("select distinct ts_code from stockdaydata")
