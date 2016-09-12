@@ -16,6 +16,7 @@ def loaddaydata(stockcode, bgndte, enddte, addflg='N',loadmode='ONCE'):
     #从现有的日期后追加数据，修改开始及结束日期
     if dbrs != [] and addflg == 'Y':
         dbdate = dbrs[0][1]
+
         dblastdate = str(dbdate)
         dbrecord = dbrs[0][2:]
         df1 = ts.get_h_data(code=stockcode, start=dblastdate, end=dblastdate)
@@ -23,15 +24,19 @@ def loaddaydata(stockcode, bgndte, enddte, addflg='N',loadmode='ONCE'):
         #print('dbrecord: ', dbrecord)
         #print('turecord: ', turecord)
         #print('bgndte:   ', bgndte)
+        print('dbdate:', dbdate)
+        print(bgndte,enddte)
         if dbrecord == turecord and bgndte < dblastdate:
             bgnpre = dbdate + datetime.timedelta(1)
-            if datetime.datetime.weekday(bgnpre) == 5:
+            weekday = datetime.datetime.weekday(bgnpre)
+            print(bgnpre,weekday)
+            if weekday == 5:
                 bgnpre += datetime.timedelta(2)
-            elif datetime.datetime.weekday(bgnpre) == 6:
+            elif weekday == 6:
                 bgnpre += datetime.timedelta(1)
             bgndte = str(bgnpre)
             print('change bgndte to ', bgndte)
-        if enddte <= bgndte:
+        if enddte < bgndte:
             cursor.close()
             conn.close()
             print('record is already!')
