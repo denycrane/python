@@ -24,7 +24,12 @@ def loaddaydata(stockcode, bgndte, enddte, addflg='N',loadmode='ONCE'):
         #print('turecord: ', turecord)
         #print('bgndte:   ', bgndte)
         if dbrecord == turecord and bgndte < dblastdate:
-            bgndte = str(dbdate + datetime.timedelta(1))
+            bgnpre = dbdate + datetime.timedelta(1)
+            if datetime.datetime.weekday(bgnpre) == 5:
+                bgnpre += datetime.timedelta(2)
+            elif datetime.datetime.weekday(bgnpre) == 6:
+                bgnpre += datetime.timedelta(1)
+            bgndte = str(bgnpre)
             print('change bgndte to ', bgndte)
         if enddte <= bgndte:
             cursor.close()
@@ -38,7 +43,7 @@ def loaddaydata(stockcode, bgndte, enddte, addflg='N',loadmode='ONCE'):
     if loadmode == 'ONCE':
         df = ts.get_h_data(code=stockcode, start=bgndte, end=enddte, retry_count=100, pause=5)
         if df is None:
-            print('no record in this perio')
+            print('no record in this perio ')
             return
         df.to_sql('tmpdata', engine, if_exists='replace')
         mntcnt = len(df.index)
