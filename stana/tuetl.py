@@ -5,7 +5,7 @@ import mysql.connector
 import datetime
 
 
-def loaddaydata(stockcode, bgndte, enddte):
+def loaddaydata(stockcode, bgndte, enddte, cflg='N'):
     print('\n\n--', datetime.datetime.now(), '\nloaddaydata:', stockcode, bgndte, enddte, )
     conn = mysql.connector.connect(user='root', password='ms@ciji1995', database='tushare')
     cursor = conn.cursor()
@@ -13,7 +13,7 @@ def loaddaydata(stockcode, bgndte, enddte):
     cursor.execute("select * from stockdaydata where ts_code = '%s' order by ts_date desc limit 1" % (stockcode))
     dbrs = cursor.fetchall()
     conn.commit()
-    if dbrs != []:
+    if dbrs != [] and cflg=='Y':
         dbdate = dbrs[0][1]
         dblastdate = str(dbdate)
         dbrecord = dbrs[0][2:]
@@ -83,7 +83,7 @@ def loadalldaydata(code='ALL'):
     today = datetime.date.today()
     stockenddte = today.strftime('%Y-%m-%d')
     # print(stockenddte)
-    record = {}
+    #record = {}
     codelist = [code]
     if code == 'ALL':
         codelist = sb.index
@@ -91,7 +91,7 @@ def loadalldaydata(code='ALL'):
         bgnpre = str(sb['timeToMarket'][stockcode])
         if len(bgnpre) == 8:
             stockbgndte = datetime.datetime.strptime(str(bgnpre), "%Y%m%d").strftime('%Y-%m-%d')
-            rs = loaddaydata(stockcode, stockbgndte, stockenddte)
+            loaddaydata(stockcode, stockbgndte, stockenddte, cflg='Y')
             #record[stockcode] = len(rs.index)
             # print(record)
 
