@@ -5,7 +5,7 @@ import mysql.connector
 import datetime
 
 
-def loaddaydata(stockcode, bgndte, enddte, cflg='N'):
+def loaddaydata(stockcode, bgndte, enddte, cflg='N', loadmode='ONCE'):
     print('\n\n--', datetime.datetime.now(), '\nloaddaydata:', stockcode, bgndte, enddte, )
     conn = mysql.connector.connect(user='root', password='ms@ciji1995', database='tushare')
     cursor = conn.cursor()
@@ -34,30 +34,41 @@ def loaddaydata(stockcode, bgndte, enddte, cflg='N'):
     # endyear = int(enddte[0:4])
     print(stockcode, bgndte, enddte)
     mntcnt = 0
-    for datayear in range(int(bgndte[0:4]), int(enddte[0:4]) + 1):
-        yearlastday = str(datayear) + '-12-31'
-        yearfirstday = str(datayear) + '-01-01'
-        if enddte >= yearlastday:
-            endday = yearlastday
-        else:
-            endday = enddte
-        if bgndte <= yearfirstday:
-            bgnday = yearfirstday
-        else:
-            bgnday = bgndte
-        df = ts.get_h_data(code=stockcode, start=bgnday, end=endday, retry_count=100, pause=5)
+    if loadmode == 'ONCE':
+        df = ts.get_h_data(code=stockcode, start=bgndte, end=enddte, retry_count=100, pause=5)
         if df is None:
-            continue
-        recnt = len(df.index)
-        print(stockcode, bgnday, endday, recnt)
-        mntcnt += recnt
+            return
         df.to_sql('tmpdata', engine, if_exists='replace')
         cursor.execute(
             "delete from stockdaydata where ts_code = '%s' and ts_date between '%s' and '%s'"
-            % (stockcode, bgnday, endday))
+            % (stockcode, bgndte, enddte))
         cursor.execute("insert into stockdaydata select '%s' , a.* from tmpdata a " % (stockcode))
         conn.commit()
-        datayear += datayear
+    elif loadmode == 'YEAR':
+        for datayear in range(int(bgndte[0:4]), int(enddte[0:4]) + 1):
+            yearlastday = str(datayear) + '-12-31'
+            yearfirstday = str(datayear) + '-01-01'
+            if enddte >= yearlastday:
+                endday = yearlastday
+            else:
+                endday = enddte
+            if bgndte <= yearfirstday:
+                bgnday = yearfirstday
+            else:
+                bgnday = bgndte
+            df = ts.get_h_data(code=stockcode, start=bgnday, end=endday, retry_count=100, pause=5)
+            if df is None:
+                continue
+            recnt = len(df.index)
+            print(stockcode, bgnday, endday, recnt)
+            mntcnt += recnt
+            df.to_sql('tmpdata', engine, if_exists='replace')
+            cursor.execute(
+                "delete from stockdaydata where ts_code = '%s' and ts_date between '%s' and '%s'"
+                % (stockcode, bgnday, endday))
+            cursor.execute("insert into stockdaydata select '%s' , a.* from tmpdata a " % (stockcode))
+            conn.commit()
+            datayear += datayear
 
     conn.commit()
     cursor.close()
@@ -78,7 +89,11 @@ def loadstockbasics():
     return df
 
 
-def loadalldaydata(code='ALL'):
+def loadalldaydata(code='ADD'):
+    conn = mysql.connector.connect(user='root', password='ms@ciji1995', database='tushare')
+    cursor = conn.cursor()
+    cursor.execute("select distinct ts_code from stockdaydata")
+    dbcodelist = cursor.fetchall()
     sb = loadstockbasics()
     today = datetime.date.today()
     stockenddte = today.strftime('%Y-%m-%d')
@@ -87,6 +102,8 @@ def loadalldaydata(code='ALL'):
     codelist = [code]
     if code == 'ALL':
         codelist = sb.index
+    elif code == 'ADD':
+        codelist = sb.index - dbcodelist
     for stockcode in codelist:
         bgnpre = str(sb['timeToMarket'][stockcode])
         if len(bgnpre) == 8:
