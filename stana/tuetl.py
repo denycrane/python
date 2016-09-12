@@ -5,7 +5,7 @@ import mysql.connector
 import datetime
 
 
-def loaddaydata(stockcode, bgndte, enddte, cflg='N', loadmode='YEAR'):
+def loaddaydata(stockcode, bgndte, enddte, addflg='N',loadmode='ONCE'):
     print('\n\n--', datetime.datetime.now(), '\nloaddaydata:', stockcode, bgndte, enddte, )
     conn = mysql.connector.connect(user='root', password='ms@ciji1995', database='tushare')
     cursor = conn.cursor()
@@ -13,7 +13,8 @@ def loaddaydata(stockcode, bgndte, enddte, cflg='N', loadmode='YEAR'):
     cursor.execute("select * from stockdaydata where ts_code = '%s' order by ts_date desc limit 1" % (stockcode))
     dbrs = cursor.fetchall()
     conn.commit()
-    if dbrs != [] and cflg=='Y':
+    #从现有的日期后追加数据，修改开始及结束日期
+    if dbrs != [] and addflg == 'Y':
         dbdate = dbrs[0][1]
         dblastdate = str(dbdate)
         dbrecord = dbrs[0][2:]
@@ -90,7 +91,7 @@ def loadstockbasics():
     return df
 
 
-def loadalldaydata(code='ALL'):
+def loadalldaydata(code='ALL',aflg='N',lmodel='ONCE'):
     conn = mysql.connector.connect(user='root', password='ms@ciji1995', database='tushare')
     cursor = conn.cursor()
     cursor.execute("select distinct ts_code from stockdaydata")
@@ -109,7 +110,7 @@ def loadalldaydata(code='ALL'):
         bgnpre = str(sb['timeToMarket'][stockcode])
         if len(bgnpre) == 8:
             stockbgndte = datetime.datetime.strptime(str(bgnpre), "%Y%m%d").strftime('%Y-%m-%d')
-            loaddaydata(stockcode, stockbgndte, stockenddte, cflg='Y')
+            loaddaydata(stockcode, stockbgndte, stockenddte, addflg=aflg,loadmode=lmodel)
             #record[stockcode] = len(rs.index)
             # print(record)
 
