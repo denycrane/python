@@ -91,7 +91,7 @@ def loadstockbasics():
     return df
 
 
-def loadalldaydata(code='ALL',aflg='N',lmodel='ONCE'):
+def loadalldaydata(code='ALL', aflg='Y', lmodel='ONCE'):
     conn = mysql.connector.connect(user='root', password='ms@ciji1995', database='tushare')
     cursor = conn.cursor()
     cursor.execute("select distinct ts_code from stockdaydata")
