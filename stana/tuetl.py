@@ -38,6 +38,7 @@ def loaddaydata(stockcode, bgndte, enddte, addflg='N',loadmode='ONCE'):
     if loadmode == 'ONCE':
         df = ts.get_h_data(code=stockcode, start=bgndte, end=enddte, retry_count=100, pause=5)
         if df is None:
+            print('no record in this perio')
             return
         df.to_sql('tmpdata', engine, if_exists='replace')
         mntcnt = len(df.index)
@@ -75,7 +76,8 @@ def loaddaydata(stockcode, bgndte, enddte, addflg='N',loadmode='ONCE'):
     conn.commit()
     cursor.close()
     conn.close()
-    return 'record number is :', mntcnt
+    print('record number is :', mntcnt)
+    return
 
 
 def loadstockbasics():
