@@ -3,6 +3,10 @@ from sqlalchemy import create_engine
 import tushare as ts
 import mysql.connector
 import datetime
+import threading
+from multiprocessing import Pool
+import math
+import os
 
 
 def loaddaydata(stockcode, bgndte, enddte, addflg='N',loadmode='ONCE'):
@@ -13,10 +17,10 @@ def loaddaydata(stockcode, bgndte, enddte, addflg='N',loadmode='ONCE'):
     cursor.execute("select * from stockdaydata where ts_code = '%s' order by ts_date desc limit 1" % (stockcode))
     dbrs = cursor.fetchall()
     conn.commit()
+    tablename = 'tmp'+stockcode;
     #从现有的日期后追加数据，修改开始及结束日期
     if dbrs != [] and addflg == 'Y':
         dbdate = dbrs[0][1]
-
         dblastdate = str(dbdate)
         dbrecord = dbrs[0][2:]
         df1 = ts.get_h_data(code=stockcode, start=dblastdate, end=dblastdate)
@@ -50,12 +54,12 @@ def loaddaydata(stockcode, bgndte, enddte, addflg='N',loadmode='ONCE'):
         if df is None:
             print('no record in this perio ')
             return
-        df.to_sql('tmpdata', engine, if_exists='replace')
+        df.to_sql(tablename, engine, if_exists='replace')
         mntcnt = len(df.index)
         cursor.execute(
             "delete from stockdaydata where ts_code = '%s' and ts_date between '%s' and '%s'"
             % (stockcode, bgndte, enddte))
-        cursor.execute("insert into stockdaydata select '%s' , a.* from tmpdata a " % (stockcode))
+        cursor.execute("insert into stockdaydata select '%s' , a.* from %s a " % (stockcode, tablename))
         conn.commit()
     elif loadmode == 'YEAR':
         for datayear in range(int(bgndte[0:4]), int(enddte[0:4]) + 1):
@@ -94,36 +98,69 @@ def loadstockbasics():
     conn = mysql.connector.connect(user='root', password='ms@ciji1995', database='tushare')
     cursor = conn.cursor()
     engine = create_engine('mysql://root:ms@ciji1995@127.0.0.1/tushare?charset=utf8')
+    print('start...')
     df = ts.get_stock_basics()
-    cursor.execute('delete from stockbasics')
+    print(df)
+    cursor.execute("delete from stockbasics")
     conn.commit()
+    print('delete stockbasics ok!')
     df.to_sql('stockbasics', engine, if_exists='append')
+    conn.commit()
+    print('insert stockbasics ok!')
     cursor.close()
     conn.close()
-    return df
+    return
 
 
-def loadalldaydata(code='ALL', aflg='Y', lmodel='ONCE'):
+def loadlistdaydata(codelist, aflg='Y', lmodel='ONCE'):
     conn = mysql.connector.connect(user='root', password='ms@ciji1995', database='tushare')
     cursor = conn.cursor()
-    cursor.execute("select distinct ts_code from stockdaydata")
+    cursor.execute("select code ,date(timeToMarket) from stockbasics")
     dbcodelist = cursor.fetchall()
-    sb = loadstockbasics()
+    sb = dict(dbcodelist)
     today = datetime.date.today()
     stockenddte = today.strftime('%Y-%m-%d')
     # print(stockenddte)
-    #record = {}
-    codelist = [code]
-    if code == 'ALL':
-        codelist = sb.index
-    elif code == 'ADD':
-        codelist = sb.index - dbcodelist
+    #record = {}print('dbdate:', dbdate)
     for stockcode in codelist:
-        bgnpre = str(sb['timeToMarket'][stockcode])
-        if len(bgnpre) == 8:
-            stockbgndte = datetime.datetime.strptime(str(bgnpre), "%Y%m%d").strftime('%Y-%m-%d')
-            loaddaydata(stockcode, stockbgndte, stockenddte, addflg=aflg,loadmode=lmodel)
+        stockbgndte = sb[stockcode].strftime('%Y-%m-%d')
+        loaddaydata(stockcode, stockbgndte, stockenddte, addflg=aflg,loadmode=lmodel)
             #record[stockcode] = len(rs.index)
             # print(record)
 
-# loaddaydata('600036')
+def loadalldaydata(threadcnt=30,mode='ALL'):
+    conn = mysql.connector.connect(user='root', password='ms@ciji1995', database='tushare')
+    cursor = conn.cursor()
+    cursor.execute("select code from stockbasics order by code")
+    dbbasicscode = cursor.fetchall()
+    conn.commit()
+    cursor.execute("select ts_code from stockdaydata group by ts_code order by ts_code")
+    dbdaydatacode = cursor.fetchall()
+    conn.commit()
+    if mode == 'ADD':
+        dbcoderesult = list(set(dbbasicscode) - set(dbdaydatacode))
+    elif mode == 'ALL':
+        dbcoderesult = dbbasicscode
+    dbcodelist = [dbcoderesult[x][0] for x in range(len(dbcoderesult))]
+    codecnt = len(dbcodelist)
+    threadcodecnt = math.ceil(codecnt/threadcnt)
+    startid = 0
+    p = Pool(threadcnt)
+    endid = startid + threadcodecnt
+    codelist =  [[0 for col in range(threadcodecnt)] for row in range(threadcnt)]
+    for threadid in range(threadcnt):
+        codelist[threadid] = dbcodelist[startid:endid]
+        print('\n\n',codelist[threadid])
+        startid += threadcodecnt
+        endid += threadcodecnt
+        if endid > codecnt + 1:
+            endid = codecnt + 1
+    #return codelist
+    threadlist = []
+    for threadid in range(threadcnt):
+        sthread=threading.Thread(target=loadlistdaydata,args=(codelist[threadid],))
+        sthread.setDaemon(True)
+        sthread.start()
+        threadlist.append(sthread)
+    for threadid in range(threadcnt):
+        threadlist[threadid].join()
