@@ -24,16 +24,17 @@ def loaddaydata(stockcode, bgndte, enddte, addflg='N',loadmode='ONCE'):
         dblastdate = str(dbdate)
         dbrecord = dbrs[0][2:]
         df1 = ts.get_h_data(code=stockcode, start=dblastdate, end=dblastdate)
+        #print(df1)
         turecord = tuple(df1.ix[dblastdate])
         #print('dbrecord: ', dbrecord)
         #print('turecord: ', turecord)
         #print('bgndte:   ', bgndte)
-        print('dbdate:', dbdate)
+        #print('dbdate:', dbdate)
         print(bgndte,enddte)
         if dbrecord == turecord and bgndte < dblastdate:
             bgnpre = dbdate + datetime.timedelta(1)
             weekday = datetime.datetime.weekday(bgnpre)
-            print(bgnpre,weekday)
+            #print(bgnpre,weekday)
             if weekday == 5:
                 bgnpre += datetime.timedelta(2)
             elif weekday == 6:
